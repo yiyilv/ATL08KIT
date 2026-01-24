@@ -20,41 +20,22 @@ The toolkit supports:
 
 ## Motivation
 
-atl08kit is motivated by the way ICESat-2 ATL08 data are commonly used in real geospatial research workflows.
+atl08kit is motivated by the way **ICESat-2 ATL08 data** are commonly used in real geospatial research workflows.
 
 ATL08 is a land and vegetation height product derived from spaceborne LiDAR observations and is widely used for terrain analysis, vegetation studies, and multi-source elevation comparison.
 In practice, ATL08 data are almost always processed as point tables and require strict and repeatable quality control.
 
 Typical workflows repeatedly involve:
-    •    Quality filtering based on elevation differences, terrain flags, and cloud indicators
-    •    Strong- and weak-beam selection using satellite orientation information (sc_orient)
-    •    Spatial clipping to areas of interest or masking with raster datasets
-    •    Iterative adjustment of filtering rules across experiments
+    - Quality filtering based on elevation differences, terrain flags, and cloud indicators
+    - Strong- and weak-beam selection using satellite orientation information (sc_orient)
+    - Spatial clipping to areas of interest or masking with raster datasets
+    - Iterative adjustment of filtering rules across experiments
 
 However, these operations are often implemented as ad-hoc scripts with limited reusability and poor testability.
 
 For this reason, atl08kit does not aim to implement a full ICESat-2 processing chain.
-Instead, it focuses on the most common and error-prone steps in ATL08 point data analysis and abstracts them into a modular, composable, and testable Python library.
+Instead, it focuses on the **most common and error-prone steps** in ATL08 point data analysis and abstracts them into a modular, composable, and testable Python library.
     
----
-
-## Project Scope
-
-The goal of this project is to design and implement a **Python geospatial library**
-that demonstrates good software engineering practices applied to real Earth
-observation data.
-
-The library focuses on **point-based ICESat-2 ATL08 data** represented as tabular
-datasets (CSV format) and provides reusable components for filtering and
-quality control.
-
-The project intentionally avoids implementing a full ICESat-2 processing chain.
-Instead, it emphasizes:
-
-- Modular design
-- Extensibility
-- Clear and stable interfaces
-- Correctness validated through automated tests
 
 ---
 
@@ -81,54 +62,54 @@ atl08kit version
 ---
 
 ## Quick Start (Command Line Interface)
-0. Extract point data from ATL08 HDF5 files
 
-## Extracting Point Tables from ATL08 HDF5
+This section demonstrates a typical end-to-end workflow using `atl08kit`,
+starting from raw ATL08 HDF5 files and producing analysis-ready geospatial outputs.
 
-ATL08 data are originally distributed as HDF5 files.  
-`atl08kit` provides a dedicated CLI command to **extract land_segments point data**
-from ATL08 H5 files into a tabular CSV format that can be processed by all other
-modules in the toolkit.
+### Step 1 — Extract point tables from ATL08 HDF5
 
-### Extract all aligned land_segments fields
+ATL08 data are distributed as HDF5 files.
+The `extract` command converts ATL08 `land_segments` into a flat CSV point table
+that can be processed by all other modules in `atl08kit`.
 
 ```bash
 atl08kit extract \
   --h5 ATL08_20220102113835_01711406_007_01.h5 \
-  --out points.csv \
+  --out points_raw.csv \
   --summary
 ```
 This command:
-• Reads ATL08 land_segments from the specified HDF5 file
-• Automatically extracts all 1D datasets aligned with latitude/longitude
-• Skips non-aligned or multi-dimensional datasets (e.g. canopy metrics)
-• Outputs a CSV file compatible with all downstream atl08kit commands
+    - Reads ATL08 land_segments from the input HDF5 file
+    - Extracts all 1D datasets aligned with latitude and longitude
+    - Skips non-aligned or multi-dimensional datasets
+    - Produces a CSV file compatible with downstream processing steps
 
 The output table always includes:
-• lon, lat — point coordinates
-• beam — beam identifier (gt1l, gt2r, etc.)
-• source_file — ATL08 file stem for traceability
+    - lon, lat — point coordinates
+    - beam — beam identifier (e.g. gt1l, gt2r)
+    - source_file — ATL08 file stem for traceability
 
-1. Filter points using a boolean expression
+### Step 2 — Quality filtering using expressions
+
+Points can be filtered using a safe, expression-based DSL.
 
 ```bash
 atl08kit filter \
-  --in input.csv \
-  --out filtered.csv \
-  --expr "abs(dem_h - h_te_best_fit) <= 3 and terrain_flg == 0 and cloud_flag_atm < 3" \
+  --in points_raw.csv \
+  --out points_qc.csv \
+  --expr "abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3" \
   --summary
 ```
 
 This command:
 
-- Reads ATL08 land_segments from the specified HDF5 file
-- Automatically extracts all 1D datasets aligned with latitude/longitude
-- Skips non-aligned or multi-dimensional datasets (e.g. canopy metrics)
-- Outputs a CSV file compatible with all downstream atl08kit commands
+    - Evaluates the expression on each row of the point table
+    - Keeps only points that satisfy the specified conditions
+    - Writes the filtered table to a new CSV file
 
 ---
 
-2. Select strong-beam points
+### Step3 - Select strong-beam points
 
 ```bash
 atl08kit beams \
@@ -139,77 +120,83 @@ atl08kit beams \
 ```
 
 This command:
-	•	Reads ATL08 HDF5 files from the provided folder
-	•	Determines strong beams based on /orbit_info/sc_orient
-	•	Keeps only rows corresponding to strong beams
+	- Reads ATL08 HDF5 files from the provided folder
+	- Determines strong beams based on /orbit_info/sc_orient
+	- Keeps only rows corresponding to strong beams
 
 ---
 
-3. Run the full processing pipeline
+
+### Step 4 — Spatial filtering using a vector mask (AOI)
+
+Filtered points can be clipped to an area of interest using a vector polygon.
 
 ```bash
-atl08kit run \
-  --in points.csv \
-  --out result.csv \
-  --h5-folder /path/to/ATL08_h5_files \
-  --expr "abs(dem_h - h_te_best_fit) <= 3 and cloud_flag_atm < 3" \
-  --summary
-```
-The pipeline combines:
-	•	Optional strong-beam selection
-	•	Optional expression-based filtering
-	•	A single consolidated output
-
----
-
-## Exporting Point Tables to Vector Formats
-
-Filtered point tables can be exported to common geospatial vector formats
-using the `export` command.
-
-Supported output formats:
-
-- GeoJSON (`.geojson`)
-- GeoPackage (`.gpkg`)
-- ESRI Shapefile (`.shp`)
-
-Example:
-
-```bash
-atl08kit export \
-  --in filtered.csv \
-  --out filtered.geojson \
-  --lon lon \
-  --lat lat \
-  --crs EPSG:4326 \
+atl08kit vector \
+  --in points_qc.csv \
+  --out points_aoi.csv \
+  --mask boundary/2022.shp \
+  --mode clip \
   --summary
 ```
 This command:
-	•	Converts the input CSV into a GeoDataFrame
-	•	Writes the output vector file using geopandas
-	•	Preserves all attribute columns
+   - Applies a spatial clip using the provided polygon mask
+   - Keeps only points inside the area of interest
 
+### Step 5 — Export to geospatial vector formats
 
-## Python API Example
+Point tables can be exported to common GIS formats.
 
-The same functionality is also accessible programmatically:
-
-```python
-import pandas as pd
-from atl08kit.filters import filter_by_expr
-
-df = pd.read_csv("input.csv")
-
-out, summary = filter_by_expr(
-    df,
-    "abs(dem_h - h_te_best_fit) <= 3 and cloud_flag_atm < 3"
-)
-
-print(summary)
-out.to_csv("filtered.csv", index=False)
+```bash
+atl08kit export \
+  --in points_aoi.csv \
+  --out points_aoi.geojson \
+  --summary
 ```
+Supported output formats:
+    - GeoJSON (.geojson)
+    - GeoPackage (.gpkg)
+    - ESRI Shapefile (.shp)
+
+All attribute columns are preserved in the output.
+
+### (Optional) Run a combined processing pipeline
+
+For convenience, the same steps can be combined using the run command.
+
+atl08kit run \
+  --in points_raw.csv \
+  --out points_result.csv \
+  --h5-folder /path/to/ATL08_h5_files \
+  --expr "abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3" \
+  --summary
+  
+The pipeline applies:
+    - Optional strong-beam selection
+    - Optional expression-based filtering
+    - A single consolidated output
+
+
 
 ---
+## Core Concepts
+
+atl08kit is designed around a small number of explicit concepts:
+
+- **Point Table**  
+  A flat CSV table where each row represents an ATL08 land segment.
+
+- **Quality Control (QC)**  
+  Boolean filtering rules applied to point attributes.
+
+- **Beam Semantics**  
+  Explicit handling of strong and weak beams based on satellite orientation.
+
+- **Spatial Context**  
+  Integration of vector and raster masks to restrict analysis regions.
+---
+
+
 
 ## Input Data Format
 
@@ -233,6 +220,80 @@ Strong-Beam Selection (beams command)
 The input CSV must contain:
 	•	beam: beam identifier (e.g. gt1l, gt2r)
 	•	source_file: source ATL08 filename (used to match HDF5 metadata)
+
+---
+
+
+## Command Reference
+
+
+This section documents the core commands provided by `atl08kit`.
+Each command is designed to perform a single, well-defined operation and can be
+used independently or composed into a larger workflow.
+
+---
+
+### `extract` — Convert ATL08 HDF5 to point tables
+
+The `extract` command converts ICESat-2 ATL08 HDF5 files into flat CSV point tables
+based on the `land_segments` group.
+
+```bash
+atl08kit extract \
+  --h5 ATL08_20220102113835_01711406_007_01.h5 \
+  --out points_raw.csv \
+  --summary
+```
+#### Behavior
+    -   Reads all available beams (gt1l–gt3r) by default
+    -    Traverses the land_segments group of each beam
+    -    Extracts all 1D datasets aligned with latitude/longitude
+    -    Automatically skips:
+    -    Multi-dimensional datasets
+    -    Datasets whose length does not match the number of land segments
+    -    Flattens nested dataset paths into column names(e.g. terrain/h_te_best_fit → terrain_h_te_best_fit)
+
+#### Always included columns
+    -    lon, lat — point coordinates
+    -    beam — beam identifier (gt1l, gt2r, etc.)
+    -    source_file — ATL08 file stem for traceability
+
+#### Notes
+
+The output CSV is the standard interchange format used by all downstream
+commands in atl08kit.
+
+### filter — Expression-based quality control
+
+The filter command applies boolean quality-control rules to a point table
+using a safe, expression-based DSL.
+```bash
+atl08kit filter \
+  --in points_raw.csv \
+  --out points_qc.csv \
+  --expr "abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3" \
+  --summary
+```
+
+#### Expression language
+
+#### Supported elements include:
+    -    Arithmetic operators: +  -  *  /  **
+    -    Comparison operators: <  <=  >  >=  ==  !=
+    -    Boolean operators: and, or, not
+    -    Built-in functions: abs(x)
+
+Expressions are parsed using Python’s AST and validated against a strict
+whitelist to prevent unsafe execution.
+
+#### Examples
+    -    abs(dem_h - terrain_h_te_best_fit) <= 3
+    -    terrain_flg == 0 and cloud_flag_atm < 3
+    -    abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3
+
+####Notes
+    -    All referenced column names must exist in the input table
+    -    The expression must evaluate to a boolean mask
 
 ---
 
