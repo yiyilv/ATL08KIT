@@ -107,7 +107,7 @@ This command:
     - Keeps only points that satisfy the specified conditions
     - Writes the filtered table to a new CSV file
 
----
+
 
 ### Step3 - Select strong-beam points
 
@@ -124,7 +124,6 @@ This command:
 	- Determines strong beams based on /orbit_info/sc_orient
 	- Keeps only rows corresponding to strong beams
 
----
 
 
 ### Step 4 — Spatial filtering using a vector mask (AOI)
@@ -201,25 +200,25 @@ atl08kit is designed around a small number of explicit concepts:
 ## Input Data Format
 
 General Requirements
-	•	Input data are provided as CSV point tables
-	•	Column names are user-defined and referenced directly in expressions
-	•	Coordinates are typically stored as lon / lat (EPSG:4326) or projected coordinates
+	-	Input data are provided as CSV point tables
+	-	Column names are user-defined and referenced directly in expressions
+	-	Coordinates are typically stored as lon / lat (EPSG:4326) or projected coordinates
 
 Filtering (filter command)
 
 The filtering expression may use:
-	•	Arithmetic operators: + - * / **
-	•	Comparison operators: < <= > >= == !=
-	•	Boolean operators: and, or, not
-	•	Built-in function: abs(x)
+	-	Arithmetic operators: + - * / **
+	-	Comparison operators: < <= > >= == !=
+	-	Boolean operators: and, or, not
+	-	Built-in function: abs(x)
 
 All referenced columns must exist in the input table.
 
 Strong-Beam Selection (beams command)
 
 The input CSV must contain:
-	•	beam: beam identifier (e.g. gt1l, gt2r)
-	•	source_file: source ATL08 filename (used to match HDF5 metadata)
+	-	beam: beam identifier (e.g. gt1l, gt2r)
+	-	source_file: source ATL08 filename (used to match HDF5 metadata)
 
 ---
 
@@ -231,7 +230,6 @@ This section documents the core commands provided by `atl08kit`.
 Each command is designed to perform a single, well-defined operation and can be
 used independently or composed into a larger workflow.
 
----
 
 ### `extract` — Convert ATL08 HDF5 to point tables
 
@@ -263,7 +261,7 @@ atl08kit extract \
 The output CSV is the standard interchange format used by all downstream
 commands in atl08kit.
 
-### filter — Expression-based quality control
+### `filter` — Expression-based quality control
 
 The filter command applies boolean quality-control rules to a point table
 using a safe, expression-based DSL.
@@ -291,9 +289,129 @@ whitelist to prevent unsafe execution.
     -    terrain_flg == 0 and cloud_flag_atm < 3
     -    abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3
 
-####Notes
+#### Notes
     -    All referenced column names must exist in the input table
     -    The expression must evaluate to a boolean mask
+    
+### `beams` — Strong-beam selection
+
+The beams command filters a point table to retain only strong-beam
+measurements based on satellite orientation (sc_orient).
+```bash
+atl08kit beams \
+  --in points.csv \
+  --out points_strong.csv \
+  --h5-folder /path/to/ATL08_h5_files \
+  --summary
+```
+Requirements
+
+The input CSV must contain:
+    -    beam — beam identifier
+    -    source_file — ATL08 filename or stem
+
+Behavior
+    -    Reads sc_orient from each ATL08 HDF5 file
+    -    Determines which beams are strong for each orbit
+    -    Keeps only rows corresponding to strong beams
+
+This command makes beam semantics explicit and avoids hard-coded assumptions
+in analysis scripts.
+
+
+### `vector` — Spatial filtering with vector masks
+
+The vector command filters points using polygon masks (AOIs).
+
+```bash
+atl08kit vector \
+  --in points_qc.csv \
+  --out points_aoi.csv \
+  --mask boundary/2022.shp \
+  --mode clip \
+  --summary
+```
+#### Modes
+    -    clip — keep points inside the polygon
+    -    exclude — keep points outside the polygon
+
+Spatial predicates
+    -    within (default)
+    -    intersects
+
+#### Monthly AOI support
+
+For time-dependent AOIs (e.g. monthly boundaries), vector supports
+automatic mask resolution based on the ATL08 filename:
+
+```bash
+atl08kit vector \
+  --in points.csv \
+  --out points_aoi.csv \
+  --monthly-folder boundaries/ \
+  --source-file ATL08_20220102113835_01711406_007_01 \
+  --ext .shp
+```
+In this mode, the AOI file is inferred from the year-month encoded in
+the ATL08 filename.
+
+#### `raster` — Raster-based masking
+
+The raster command filters points by sampling values from a raster dataset.
+
+```bash
+atl08kit raster \
+  --in points.csv \
+  --out points_masked.csv \
+  --raster landcover.tif \
+  --keep 1 2 3 \
+  --summary
+```
+Capabilities
+    -    Keep or drop points based on raster values
+    -    Select raster band
+    -    Optionally keep or discard nodata samples
+
+This is commonly used for land-cover masks, DEM validity layers,
+or classification rasters.
+
+### `export` — Export to geospatial vector formats
+
+The export command converts a CSV point table into standard GIS vector formats
+
+```bash
+atl08kit export \
+  --in points_aoi.csv \
+  --out points_aoi.geojson \
+  --summary
+  ```
+Supported formats
+    -    GeoJSON (.geojson)
+    -    GeoPackage (.gpkg)
+    -    ESRI Shapefile (.shp)
+
+All attribute columns are preserved in the output.
+Export requires geopandas.
+
+#### Python API Example
+
+All core functionality in atl08kit is also available programmatically.
+```python
+import pandas as pd
+from atl08kit.filters import filter_by_expr
+
+df = pd.read_csv("points_raw.csv")
+
+filtered, summary = filter_by_expr(
+    df,
+    "abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3"
+)
+
+print(summary)
+filtered.to_csv("points_qc.csv", index=False)
+```
+The Python API mirrors the CLI behavior and is designed for reproducible
+research workflows and integration into larger analysis pipelines.
 
 ---
 
@@ -306,10 +424,10 @@ Run the full test suite:
 pytest
 ```
 The tests include:
-	•	Unit tests for expression parsing and filtering
-	•	Unit tests for strong-beam logic
-	•	CLI tests executed via subprocess
-	•	Pipeline and batch integration tests
+	-	Unit tests for expression parsing and filtering
+	-	Unit tests for strong-beam logic
+	-	CLI tests executed via subprocess
+	-	Pipeline and batch integration tests
 
 Synthetic test data are generated inside the test suite to ensure
 reproducibility and independence from large external datasets.
