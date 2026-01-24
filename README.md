@@ -16,6 +16,28 @@ The toolkit supports:
 
 ---
 
+
+
+## Motivation
+
+atl08kit is motivated by the way ICESat-2 ATL08 data are commonly used in real geospatial research workflows.
+
+ATL08 is a land and vegetation height product derived from spaceborne LiDAR observations and is widely used for terrain analysis, vegetation studies, and multi-source elevation comparison.
+In practice, ATL08 data are almost always processed as point tables and require strict and repeatable quality control.
+
+Typical workflows repeatedly involve:
+    •    Quality filtering based on elevation differences, terrain flags, and cloud indicators
+    •    Strong- and weak-beam selection using satellite orientation information (sc_orient)
+    •    Spatial clipping to areas of interest or masking with raster datasets
+    •    Iterative adjustment of filtering rules across experiments
+
+However, these operations are often implemented as ad-hoc scripts with limited reusability and poor testability.
+
+For this reason, atl08kit does not aim to implement a full ICESat-2 processing chain.
+Instead, it focuses on the most common and error-prone steps in ATL08 point data analysis and abstracts them into a modular, composable, and testable Python library.
+    
+---
+
 ## Project Scope
 
 The goal of this project is to design and implement a **Python geospatial library**
