@@ -78,6 +78,7 @@ atl08kit extract \
   --out points_raw.csv \
   --summary
 ```
+
 This command:
     - Reads ATL08 land_segments from the input HDF5 file
     - Extracts all 1D datasets aligned with latitude and longitude
@@ -85,7 +86,7 @@ This command:
     - Produces a CSV file compatible with downstream processing steps
 
 The output table always includes:
-    - lon, lat — point coordinates
+    - lon, lat  point coordinates
     - beam — beam identifier (e.g. gt1l, gt2r)
     - source_file — ATL08 file stem for traceability
 
@@ -138,6 +139,7 @@ atl08kit vector \
   --mode clip \
   --summary
 ```
+
 This command:
    - Applies a spatial clip using the provided polygon mask
    - Keeps only points inside the area of interest
