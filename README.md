@@ -103,7 +103,6 @@ atl08kit filter \
 ```
 
 This command:
-
     - Evaluates the expression on each row of the point table
     - Keeps only points that satisfy the specified conditions
     - Writes the filtered table to a new CSV file
