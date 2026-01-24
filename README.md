@@ -85,10 +85,6 @@ This command:
 - Skips non-aligned or multi-dimensional datasets
 - Produces a CSV file compatible with downstream processing steps
 
-The output table always includes:
-- lon, lat - point coordinates
-- beam — beam identifier (e.g. gt1l, gt2r)
-- source_file — ATL08 file stem for traceability
 
 ### Step 2 — Quality filtering using expressions
 
@@ -199,32 +195,6 @@ atl08kit is designed around a small number of explicit concepts:
 
 
 
-## Input Data Format
-
-General Requirements
--	Input data are provided as CSV point tables
--	Column names are user-defined and referenced directly in expressions
--	Coordinates are typically stored as lon / lat (EPSG:4326) or projected coordinates
-
-Filtering (filter command)
-
-The filtering expression may use:
--	Arithmetic operators: + - * / **
--	Comparison operators: < <= > >= == !=
--	Boolean operators: and, or, not
--	Built-in function: abs(x)
-
-All referenced columns must exist in the input table.
-
-Strong-Beam Selection (beams command)
-
-The input CSV must contain:
--	beam: beam identifier (e.g. gt1l, gt2r)
--	source_file: source ATL08 filename (used to match HDF5 metadata)
-
----
-
-
 ## Command Reference
 
 
@@ -249,8 +219,8 @@ atl08kit extract \
 -    Traverses the land_segments group of each beam
 -    Extracts all 1D datasets aligned with latitude/longitude
 -    Automatically skips:
--    Multi-dimensional datasets
--    Datasets whose length does not match the number of land segments
+     - Multi-dimensional datasets
+     - Datasets whose length does not match the number of land segments
 -    Flattens nested dataset paths into column names(e.g. terrain/h_te_best_fit → terrain_h_te_best_fit)
 
 #### Always included columns
@@ -426,10 +396,10 @@ Run the full test suite:
 pytest
 ```
 The tests include:
--	Unit tests for expression parsing and filtering
--	Unit tests for strong-beam logic
--	CLI tests executed via subprocess
--	Pipeline and batch integration tests
+-    Unit tests for expression parsing and filtering
+-    Unit tests for strong-beam logic
+-    CLI tests executed via subprocess
+-    Pipeline and batch integration tests
 
 Synthetic test data are generated inside the test suite to ensure
 reproducibility and independence from large external datasets.
