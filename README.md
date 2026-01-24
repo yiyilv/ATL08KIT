@@ -202,25 +202,25 @@ atl08kit is designed around a small number of explicit concepts:
 ## Input Data Format
 
 General Requirements
--    Input data are provided as CSV point tables
--    Column names are user-defined and referenced directly in expressions
--    Coordinates are typically stored as lon / lat (EPSG:4326) or projected coordinates
+-	Input data are provided as CSV point tables
+-	Column names are user-defined and referenced directly in expressions
+-	Coordinates are typically stored as lon / lat (EPSG:4326) or projected coordinates
 
 Filtering (filter command)
 
 The filtering expression may use:
--    Arithmetic operators: + - * / **
--    Comparison operators: < <= > >= == !=
--    Boolean operators: and, or, not
--    Built-in function: abs(x)
+-	Arithmetic operators: + - * / **
+-	Comparison operators: < <= > >= == !=
+-	Boolean operators: and, or, not
+-	Built-in function: abs(x)
 
 All referenced columns must exist in the input table.
 
 Strong-Beam Selection (beams command)
 
 The input CSV must contain:
--    beam: beam identifier (e.g. gt1l, gt2r)
--    source_file: source ATL08 filename (used to match HDF5 metadata)
+-	beam: beam identifier (e.g. gt1l, gt2r)
+-	source_file: source ATL08 filename (used to match HDF5 metadata)
 
 ---
 
@@ -426,10 +426,10 @@ Run the full test suite:
 pytest
 ```
 The tests include:
--    Unit tests for expression parsing and filtering
--    Unit tests for strong-beam logic
--    CLI tests executed via subprocess
--    Pipeline and batch integration tests
+-	Unit tests for expression parsing and filtering
+-	Unit tests for strong-beam logic
+-	CLI tests executed via subprocess
+-	Pipeline and batch integration tests
 
 Synthetic test data are generated inside the test suite to ensure
 reproducibility and independence from large external datasets.
