@@ -327,7 +327,7 @@ atl08kit vector \
 In this mode, the AOI file is inferred from the year-month encoded in
 the ATL08 filename.
 
-#### `raster` — Raster-based masking
+### `raster` — Raster-based masking
 
 The raster command filters points by sampling values from a raster dataset.
 
@@ -365,7 +365,35 @@ Supported formats
 All attribute columns are preserved in the output.
 Export requires geopandas.
 
-#### Python API Example
+---
+
+## Advanced Usage — Batch Processing
+
+In practical workflows, ATL08 point tables are often generated and processed
+in large numbers (e.g. per orbit, per tile, or per month).
+
+The `batch` command applies the same processing logic to **all CSV files in a directory**
+and produces both per-file outputs and an aggregated summary table.
+
+Typical use cases include:
+- Applying identical QC rules to multiple ATL08 tiles
+- Running consistent experiments across different regions or time periods
+- Collecting pass rates and statistics for quality assessment
+
+```bash
+atl08kit batch \
+  --in-dir points_raw/ \
+  --out-dir points_qc/ \
+  --expr "abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3" \
+  --summary batch_summary.csv
+```
+This command:
+- Iterates over all CSV files in the input directory
+- Applies the specified expression-based quality control
+- Writes filtered CSV files to the output directory
+- Generates a summary CSV reporting input size, output size, and pass rate for each file
+
+## Python API Example
 
 All core functionality in atl08kit is also available programmatically.
 ```python
