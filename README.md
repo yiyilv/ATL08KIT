@@ -327,7 +327,7 @@ atl08kit vector \
 In this mode, the AOI file is inferred from the year-month encoded in
 the ATL08 filename.
 
-#### `raster` — Raster-based masking
+### `raster` — Raster-based masking
 
 The raster command filters points by sampling values from a raster dataset.
 
@@ -365,7 +365,35 @@ Supported formats
 All attribute columns are preserved in the output.
 Export requires geopandas.
 
-#### Python API Example
+---
+
+## Advanced Usage — Batch Processing
+
+In practical workflows, ATL08 point tables are often generated and processed
+in large numbers (e.g. per orbit, per tile, or per month).
+
+The `batch` command applies the same processing logic to **all CSV files in a directory**
+and produces both per-file outputs and an aggregated summary table.
+
+Typical use cases include:
+- Applying identical QC rules to multiple ATL08 tiles
+- Running consistent experiments across different regions or time periods
+- Collecting pass rates and statistics for quality assessment
+
+```bash
+atl08kit batch \
+  --in-dir points_raw/ \
+  --out-dir points_qc/ \
+  --expr "abs(dem_h - terrain_h_te_best_fit) <= 3 and cloud_flag_atm < 3" \
+  --summary batch_summary.csv
+```
+This command:
+- Iterates over all CSV files in the input directory
+- Applies the specified expression-based quality control
+- Writes filtered CSV files to the output directory
+- Generates a summary CSV reporting input size, output size, and pass rate for each file
+
+## Python API Example
 
 All core functionality in atl08kit is also available programmatically.
 ```python
@@ -405,7 +433,6 @@ Synthetic test data are generated inside the test suite to ensure
 reproducibility and independence from large external datasets.
 
 ---
-
 ## Project Structure
 ```bash
 src/atl08kit/
@@ -427,6 +454,54 @@ tests/
 ```
 
 ---
+## Module Structure
+The following table summarizes the core modules of atl08kit, their responsibilities, main functionalities, and typical usage scenarios.
+
+| Module file | Responsibility | Description |
+|------------|----------------|-------------|
+| `atl08.py` | ATL08 data reading and parsing | Extracts `land_segments` point data from ATL08 HDF5 files and automatically discovers all one-dimensional datasets aligned with latitude and longitude, producing analysis-ready CSV tables. |
+| `io.py` | Generic table I/O | Provides unified utilities for reading and writing CSV point tables, ensuring consistent data handling across modules. |
+| `expr.py` | Safe expression DSL | Parses and validates user-defined expressions using Python AST, allowing only a restricted set of operators and functions (e.g. `abs`) to ensure safe and deterministic evaluation. |
+| `filters.py` | Expression-based filtering | Applies validated expressions to point tables, generating boolean masks and returning filtered results together with summary statistics. |
+| `beams.py` | Strong / weak beam logic | Identifies strong and weak beams based on ATL08 `sc_orient` metadata and filters point tables accordingly. |
+| `vector_mask.py` | Vector-based spatial masking | Performs spatial filtering of points using vector polygon masks (AOIs), supporting clipping and exclusion operations. |
+| `raster.py` | Raster-based spatial masking | Samples raster values at point locations and keeps or discards points based on raster-based constraints. |
+| `pipeline.py` | Processing pipeline orchestration | Combines strong-beam selection and expression-based filtering into a reproducible single-file processing workflow. |
+| `batch.py` | Batch processing engine | Applies a unified processing pipeline to multiple CSV files within a directory and produces aggregated summaries. |
+| `export.py` | Spatial data export | Converts CSV point tables into standard GIS vector formats such as GeoJSON, GeoPackage, and Shapefile. |
+| `cli.py` | Command-line interface | Exposes all core functionalities through a unified and user-facing command-line interface. |
+
+
+---
+
+## Test Suite Structure
+The tests/ directory contains unit tests, CLI tests, and integration tests
+covering all core functionalities of atl08kit.
+The test suite is designed to validate both individual modules and complete
+end-to-end workflows.
+
+| Test file | Test level | Description |
+|----------|------------|-------------|
+| `test_atl08_fields.py` | Unit | Tests field discovery from ATL08 HDF5 files, ensuring correct enumeration of available `land_segments` datasets for a given beam. |
+| `test_batch_cli.py` | Integration / CLI | Tests the batch-processing command, including directory traversal, parameter forwarding, and summary table generation. |
+| `test_beams.py` | Unit | Tests strong-beam identification logic based on `sc_orient`, validating correct beam classification under different satellite orientations. |
+| `test_cli.py` | CLI | Tests general CLI behavior, including command registration, argument parsing, and error handling. |
+| `test_export.py` | Unit | Tests CSV-to-vector export logic, including `GeoDataFrame` creation and driver selection. |
+| `test_export_cli.py` | CLI | End-to-end test of the export command via subprocess, verifying output file creation and non-empty results. |
+| `test_extract_cli.py` | CLI | Tests the extract command using a synthetic ATL08 HDF5 fixture, validating aligned-field extraction and skipped multi-dimensional datasets. |
+| `test_filters.py` | Unit | Tests expression-based filtering logic, including valid expressions, invalid syntax, missing columns, and boolean mask correctness. |
+| `test_io.py` | Unit | Tests low-level I/O utilities for reading and writing CSV tables, including format validation and error handling. |
+| `test_pipeline_cli.py` | CLI / Integration | Tests the run command, validating correct orchestration of optional strong-beam filtering and expression-based QC. |
+| `test_raster.py` | Unit | Tests raster sampling and masking logic, including value-based keep/drop rules and `nodata` handling. |
+| `test_raster_cli.py` | CLI | End-to-end tests for the raster command, ensuring correct interaction between CSV input and raster masks. |
+| `test_vector_mask.py` | Unit | Tests vector-based spatial masking logic, including geometric predicates such as `within` and `intersects`. |
+| `test_vector_cli.py` | CLI | Tests the vector command for AOI-based spatial filtering using polygon masks. |
+| `test_vector_monthly_cli.py` | CLI | Tests monthly AOI resolution logic, where vector masks are automatically selected based on year–month information in ATL08 filenames. |
+
+---
+
+
+
 
 ## Notes
 
