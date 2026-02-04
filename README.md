@@ -503,8 +503,3 @@ end-to-end workflows.
 
 
 
-## Notes
-
-This project was developed by a group of up to three students as required by the course.
-Version control was managed using Git, and the project emphasizes clarity, modularity,
-and testability over feature completeness.
